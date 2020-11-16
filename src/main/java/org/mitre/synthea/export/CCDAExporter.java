@@ -111,4 +111,66 @@ public class CCDAExporter {
     }
     return writer.toString();
   }
+
+    /**
+   * Export a CCDA R2.1 document for a Person at a given time.
+   *
+   * @param person
+   *          Person to export.
+   * @param document_type
+   *          The document type to generate.
+   * @param time
+   *          Time the record should be generated. Any content in the record AFTER this time will
+   *          not be included.
+   * @return String of CCDA R2.1 XML.
+   */
+  public static String export(Person person, String document_type, long time) {
+    // create a super encounter... this makes it easier to access
+    // all the Allergies (for example) in the export templates,
+    // instead of having to iterate through all the encounters.
+    Encounter superEncounter = person.record.new Encounter(time, "super");
+    for (Encounter encounter : person.record.encounters) {
+      if (encounter.start <= time) {
+        superEncounter.observations.addAll(encounter.observations);
+        superEncounter.reports.addAll(encounter.reports);
+        superEncounter.conditions.addAll(encounter.conditions);
+        superEncounter.allergies.addAll(encounter.allergies);
+        superEncounter.procedures.addAll(encounter.procedures);
+        superEncounter.immunizations.addAll(encounter.immunizations);
+        superEncounter.medications.addAll(encounter.medications);
+        superEncounter.careplans.addAll(encounter.careplans);
+        superEncounter.imagingStudies.addAll(encounter.imagingStudies);
+      } else {
+        break;
+      }
+    }
+
+    // The export templates fill in the record by accessing the attributes
+    // of the Person, so we add a few attributes just for the purposes of export.
+    person.attributes.put("UUID", new UUIDGenerator(person));
+    person.attributes.put("ehr_encounters", person.record.encounters);
+    person.attributes.put("ehr_observations", superEncounter.observations);
+    person.attributes.put("ehr_reports", superEncounter.reports);
+    person.attributes.put("ehr_conditions", superEncounter.conditions);
+    person.attributes.put("ehr_allergies", superEncounter.allergies);
+    person.attributes.put("ehr_procedures", superEncounter.procedures);
+    person.attributes.put("ehr_immunizations", superEncounter.immunizations);
+    person.attributes.put("ehr_medications", superEncounter.medications);
+    person.attributes.put("ehr_careplans", superEncounter.careplans);
+    person.attributes.put("ehr_imaging_studies", superEncounter.imagingStudies);
+    person.attributes.put("time", time);
+    person.attributes.put("race_lookup", RaceAndEthnicity.LOOK_UP_CDC_RACE);
+    person.attributes.put("ethnicity_lookup", RaceAndEthnicity.LOOK_UP_CDC_ETHNICITY_CODE);
+    person.attributes.put("ethnicity_display_lookup",
+        RaceAndEthnicity.LOOK_UP_CDC_ETHNICITY_DISPLAY);
+
+    StringWriter writer = new StringWriter();
+    try {
+      Template template = TEMPLATES.getTemplate(document_type + ".ftl");
+      template.process(person.attributes, writer);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return writer.toString();
+  }
 }

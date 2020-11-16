@@ -226,6 +226,12 @@ public abstract class Exporter {
       Path outFilePath = outDirectory.toPath().resolve(filename(person, fileTag, "xml"));
       writeNewFile(outFilePath, ccdaXml);
     }
+    if (Boolean.parseBoolean(Config.get("exporter.ccda.consultation_note.export"))) {
+      String ccdaXml = CCDAExporter.export(person, "consultation_note", stopTime);
+      File outDirectory = getOutputFolder("ccda", person);
+      Path outFilePath = outDirectory.toPath().resolve(filename(person, fileTag + "_consultation_note", "xml"));
+      writeNewFile(outFilePath, ccdaXml);
+    }
     if (Boolean.parseBoolean(Config.get("exporter.csv.export"))) {
       try {
         CSVExporter.getInstance().export(person, stopTime);
